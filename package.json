@@ -2,12 +2,13 @@
   "name": "pyocd-one-click-loader",
   "displayName": "PyOCD One-Click Loader",
   "description": "One-click flashing with pyOCD — auto-detects targets and ELF files",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.118.0"
   },
   "author": "COITSILLE",
-  "git"
+  "publisher": "COITSILLE",
+  "repository": {"url": "https://github.com/COITSILLE/pyocd-one-click-loader"},
   "categories": [
     "Other"
   ],
