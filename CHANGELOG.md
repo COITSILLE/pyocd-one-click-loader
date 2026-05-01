@@ -1,6 +1,8 @@
 # Change Log
 
 All notable changes to the "pyocd-one-click-loader" extension are documented here.
+## [1.0.1]
+- Replace `pyocd flash` with `pyocd load` 
 
 ## [1.0.0]
 
