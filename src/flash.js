@@ -73,7 +73,7 @@ async function flash() {
   if (!fileUri) return;
 
   const filePath = fileUri.fsPath;
-  const command = `pyocd flash -t ${target} "${filePath}"`;
+  const command = `pyocd load -t ${target} "${filePath}"`;
   runInTerminal(command);
 }
 
