@@ -1,0 +1,55 @@
+{
+  "name": "pyocd-one-click-loader",
+  "displayName": "PyOCD One-Click Loader",
+  "description": "One-click flashing with pyOCD — auto-detects targets and ELF files",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.118.0"
+  },
+  "author": "COITSILLE",
+  "git"
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:pyocd-one-click-loader.selectTarget",
+    "onCommand:pyocd-one-click-loader.flash"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pyocd-one-click-loader.selectTarget",
+        "title": "PyOCD: Select Target"
+      },
+      {
+        "command": "pyocd-one-click-loader.flash",
+        "title": "PyOCD: Flash"
+      }
+    ],
+    "configuration": {
+      "title": "PyOCD One-Click Loader",
+      "properties": {
+        "pyocd-one-click-loader.target": {
+          "type": "string",
+          "default": "",
+          "description": "Target name for pyOCD (e.g. stm32f407vgtx)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.118.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "eslint": "^9.39.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}
