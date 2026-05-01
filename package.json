@@ -6,6 +6,7 @@
   "engines": {
     "vscode": "^1.118.0"
   },
+  "icon": "./icon/icon~1.png",
   "author": "COITSILLE",
   "publisher": "COITSILLE",
   "repository": {"url": "https://github.com/COITSILLE/pyocd-one-click-loader"},
