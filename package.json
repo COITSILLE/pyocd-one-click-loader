@@ -1,8 +1,8 @@
 {
   "name": "pyocd-one-click-loader",
   "displayName": "PyOCD One-Click Loader",
-  "description": "One-click flashing with pyOCD — auto-detects targets and ELF files",
-  "version": "1.1.0",
+  "description": "One-click flashing with pyOCD - auto-detects targets and ELF files",
+  "version": "1.1.1",
   "engines": {
     "vscode": "^1.118.0"
   },
@@ -18,7 +18,8 @@
   "activationEvents": [
     "onStartupFinished",
     "onCommand:pyocd-one-click-loader.selectTarget",
-    "onCommand:pyocd-one-click-loader.flash"
+    "onCommand:pyocd-one-click-loader.flash",
+    "onCommand:pyocd-one-click-loader.toggleReset"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -31,6 +32,11 @@
         "command": "pyocd-one-click-loader.flash",
         "title": "PyOCD: Flash"
       }
+      ,
+      {
+        "command": "pyocd-one-click-loader.toggleReset",
+        "title": "PyOCD: Toggle Reset After Load"
+      }
     ],
     "configuration": {
       "title": "PyOCD One-Click Loader",
@@ -38,7 +44,15 @@
         "pyocd-one-click-loader.target": {
           "type": "string",
           "default": "",
+          "scope": "resource",
           "description": "Target name for pyOCD (e.g. stm32f407vgtx)"
+        }
+        ,
+        "pyocd-one-click-loader.resetAfterLoad": {
+          "type": "boolean",
+          "default": true,
+          "scope": "resource",
+          "description": "Whether to reset the target after pyocd load (set to false to pass --no-reset)."
         }
       }
     }

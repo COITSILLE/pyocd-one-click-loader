@@ -7,15 +7,39 @@ const { pickTarget } = require('./targets');
  * Find .elf files inside the workspace, preferring ./build/**.
  */
 async function findElfFiles() {
-  // First try inside build folders
-  const buildPattern = new vscode.RelativePattern(vscode.workspace.workspaceFolders?.[0], 'build/**/*.elf');
-  let files = await vscode.workspace.findFiles(buildPattern, null, 200);
-  if (files.length === 0) {
-    // Fallback: search entire workspace
-    const allPattern = new vscode.RelativePattern(vscode.workspace.workspaceFolders?.[0], '**/*.elf');
-    files = await vscode.workspace.findFiles(allPattern, '**/node_modules/**', 200);
+  const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
+  if (workspaceFolders.length === 0) {
+    return [];
   }
-  return files;
+
+  const uniqueFiles = new Map();
+  const addFiles = files => {
+    for (const file of files) {
+      uniqueFiles.set(file.fsPath, file);
+    }
+  };
+
+  const commonBuildDirs = ['build/**/*.elf', 'out/**/*.elf', 'Debug/**/*.elf', 'Release/**/*.elf', 'bin/**/*.elf'];
+
+  // Prefer common firmware build output directories first.
+  for (const pattern of commonBuildDirs) {
+    for (const folder of workspaceFolders) {
+      const files = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern), null, 200);
+      addFiles(files);
+    }
+  }
+
+  if (uniqueFiles.size > 0) {
+    return [...uniqueFiles.values()];
+  }
+
+  // Fallback: search the entire workspace for any .elf file.
+  for (const folder of workspaceFolders) {
+    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.elf'), null, 200);
+    addFiles(files);
+  }
+
+  return [...uniqueFiles.values()];
 }
 
 /**
@@ -55,8 +79,12 @@ async function flash() {
     return;
   }
 
-  const config = vscode.workspace.getConfiguration('pyocd-one-click-loader');
+  const fileUri = await pickElfFile();
+  if (!fileUri) return;
+
+  const config = vscode.workspace.getConfiguration('pyocd-one-click-loader', fileUri);
   let target = config.get('target', '').trim();
+  const reset = config.get('resetAfterLoad', true);
   if (!target) {
     // If no target configured, prompt user to pick one, then continue
     const chosen = await pickTarget('');
@@ -64,16 +92,15 @@ async function flash() {
       // User cancelled
       return;
     }
-    await config.update('target', chosen, vscode.ConfigurationTarget.Workspace);
+    await config.update('target', chosen, vscode.ConfigurationTarget.WorkspaceFolder);
     target = chosen;
     vscode.window.showInformationMessage(`Target set to: ${chosen}`);
   }
 
-  const fileUri = await pickElfFile();
-  if (!fileUri) return;
-
   const filePath = fileUri.fsPath;
-  const command = `pyocd load -t ${target} "${filePath}"`;
+  // Append --no-reset when user disabled resetAfterLoad
+  const noResetFlag = reset ? '' : ' --no-reset';
+  const command = `pyocd load -t ${target}${noResetFlag} "${filePath}"`;
   runInTerminal(command);
 }
 
