@@ -1,14 +1,20 @@
 const { execFile } = require('child_process');
 const vscode = require('vscode');
 
+let pyocdAvailable = null; // null = unchecked, true/false = cached
+
 /**
  * Check if pyOCD is available in PATH.
- * Resolves with true if `pyocd --version` succeeds, else false.
+ * Result is cached after first call — avoids spawning a process on every flash.
  */
 function checkPyOCD() {
+  if (pyocdAvailable !== null) {
+    return Promise.resolve(pyocdAvailable);
+  }
   return new Promise((resolve) => {
     execFile('pyocd', ['--version'], { timeout: 5000 }, (error) => {
-      resolve(!error);
+      pyocdAvailable = !error;
+      resolve(pyocdAvailable);
     });
   });
 }

@@ -53,6 +53,15 @@
           "default": true,
           "scope": "resource",
           "description": "Whether to reset the target after pyocd load (set to false to pass --no-reset)."
+        },
+        "pyocd-one-click-loader.elfSearchPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Directories to search for .elf files (relative to workspace root). Speeds up flash by avoiding full workspace scan. Example: [\"build\", \"out/Debug\"]. Leave empty to auto-detect."
         }
       }
     }
