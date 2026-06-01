@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 const { pickTarget } = require('./src/targets');
-const { flash } = require('./src/flash');
-const { checkPyOCD, checkPython } = require('./src/utils');
+const { flash, disposeFlashResources } = require('./src/flash');
+const { checkPyOCD } = require('./src/utils');
 
 function getSettingsTarget() {
   return vscode.workspace.workspaceFolders?.length
@@ -74,6 +74,8 @@ function activate(context) {
   });
 }
 
-function deactivate() {}
+function deactivate() {
+  disposeFlashResources();
+}
 
 module.exports = { activate, deactivate };

@@ -1,6 +1,5 @@
 const vscode = require('vscode');
 const { execFile } = require('child_process');
-const { checkPyOCD } = require('./utils');
 
 let cachedTargets = null; // [{name, vendor, part}]
 
@@ -74,7 +73,7 @@ async function pickTarget(currentTarget) {
     }, async () => {
       return await getTargets();
     });
-  } catch (err) {
+  } catch {
     vscode.window.showErrorMessage('Failed to load pyOCD targets. Is pyOCD installed?');
     return undefined;
   }
