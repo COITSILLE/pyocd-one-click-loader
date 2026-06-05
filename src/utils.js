@@ -37,7 +37,7 @@ function checkPython() {
  * Execute a command in a new terminal and show the command.
  */
 function runInTerminal(command) {
-  const name = 'PyOCD Loader';
+  const name = 'PyOCD Programmer';
   let terminal = vscode.window.terminals.find(t => t.name === name);
   if (!terminal) {
     terminal = vscode.window.createTerminal(name);

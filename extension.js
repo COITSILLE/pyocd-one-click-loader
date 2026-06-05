@@ -68,7 +68,7 @@ function activate(context) {
   checkPyOCD().then(ok => {
     if (!ok) {
       vscode.window.showWarningMessage(
-        'PyOCD not found. Please install pyOCD to use PyOCD One-Click Loader.'
+        'PyOCD not found. Please install pyOCD to use PyOCD One-Click Programmer.'
       );
     }
   });

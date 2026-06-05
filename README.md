@@ -1,49 +1,97 @@
-# PyOCD One-Click Loader
+# PyOCD One-Click Programmer / PyOCD 一键烧录
 
-A VS Code extension for quickly flashing firmware using pyOCD. The extension auto-discovers ELF files in the workspace, provides target selection, and offers a one-click flash workflow.
+[中文](#中文) | [English](#english)
 
-Features
+## English
 
-- Status bar `�? Flash` button to start flashing with a single click.
-- Auto-detects `.elf` files in the workspace, preferring common firmware build folders such as `build/**`, `out/**`, `Debug/**`, `Release/**`, and `bin/**`.
-- If no target is configured, prompts to select one and continues flashing.
-- Shows a loading notification while fetching pyOCD targets.
-- Reuses a terminal named `PyOCD Loader` to keep flash output history.
+A VS Code extension for one-click firmware flashing with pyOCD. Auto-discovers ELF files, provides target selection, and flashes with a single click.
 
-Requirements
+### Features
 
-- `pyocd` must be installed and available on PATH (install with `pip install pyocd`).
-- Python 3 is recommended.
+- Status bar **?Flash** button for one-click flashing.
+- Auto-detects `.elf` files, preferring common build folders (`build/`, `out/`, `Debug/`, `Release/`, `bin/`).
 
-Usage
+### Requirements
 
-1. Run `PyOCD: Select Target` from the command palette to choose your board target. If you run `PyOCD: Flash` without a configured target, the extension will prompt you to select one.
-2. Build your project to produce a `.elf` file. The extension will look in common build output folders first, then fall back to the rest of the workspace.
-3. Click the `�? Flash` status bar button on the right or run `PyOCD: Flash`, pick the ELF file, and wait for the flashing to complete.
+- `pyocd` must be installed and on PATH: `pip install pyocd`
+- Python 3 recommended.
 
-Commands
+### Usage
 
-- `PyOCD: Select Target` � choose the board target to use for flashing.
-- `PyOCD: Flash` � pick an ELF and flash it to the target (also available via the status bar `? Flash` button).
-- `PyOCD: Toggle Reset After Load` � toggle the `pyocd-one-click-loader.resetAfterLoad` workspace setting (when off, `--no-reset` is passed to `pyocd load`).
+1. Run **PyOCD: Select Target** to choose your board; or just click Flash and pick when prompted.
+2. Build your project to produce a `.elf` file.
+3. Click the **?Flash** status bar button or run **PyOCD: Flash**, pick the ELF, done.
 
-Configuration
+### Commands
 
-- `pyocd-one-click-loader.target` (string): Target name to use for pyOCD (e.g. `stm32f407vgtx`). Stored at workspace level.
+| Command | Description |
+|---------|-------------|
+| `PyOCD: Select Target` | Choose target chip |
+| `PyOCD: Flash` | Pick an ELF and flash |
+| `PyOCD: Toggle Reset After Load` | Toggle post-flash reset |
 
-- `pyocd-one-click-loader.resetAfterLoad` (boolean): Whether to reset the target after `pyocd load`. Defaults to `true`. Set to `false` to pass the `--no-reset` flag to `pyocd load`.
+### Configuration
 
-Note: in a folder workspace these settings are written to the current folder's `.vscode/settings.json`.
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `pyocd-one-click-loader.target` | string | `""` | Target name, e.g. `stm32f407vgtx` |
+| `pyocd-one-click-loader.resetAfterLoad` | boolean | `true` | Reset after load (`false` passes `--no-reset`) |
+| `pyocd-one-click-loader.elfSearchPaths` | string[] | `[]` | Custom .elf search dirs, e.g. `["build", "out/Debug"]`. Leave empty to auto-detect. |
 
-Troubleshooting
+> In folder workspaces, settings are written to the current folder's `.vscode/settings.json`.
 
-- No `.elf` files found: build the project or ensure your ELF is in one of the common output folders, or somewhere else in the workspace.
-- pyOCD not found: run `pyocd --version` in a terminal to verify installation.
+### Troubleshooting
 
-Contributing
-
-Contributions, bug reports, and feature requests are welcome. Please include reproduction steps and any relevant logs when opening an issue.
+- **No .elf files found**: Build the project, or set `elfSearchPaths` to point to your output directory.
+- **pyOCD not found**: Run `pyocd --version` in a terminal to verify installation.
 
 ---
 
-See the source code and CHANGELOG for more details.
+## 中文
+
+一个 VS Code 扩展，使用 pyOCD 快速烧录固件。自动发现工作区中的 ELF 文件，提供目标芯片选择，一键完成烧录。
+
+### 功能
+
+- 状态栏 **?Flash** 按钮，一键烧录。
+- 自动发现 `.elf` 文件，优先搜索常见构建目录（`build/`、`out/`、`Debug/`、`Release/`、`bin/`）。
+
+### 依赖
+
+- 需安装 `pyocd` 并加入 PATH：`pip install pyocd`
+- 建议安装 Python 3。
+
+### 使用方法
+
+1. 通过命令面板运行 **PyOCD: Select Target** 选择目标芯片；或直接点 Flash，扩展会提示你选择。
+2. 构建项目生成 `.elf` 文件。
+3. 点击状态栏 **?Flash** 按钮或运行 **PyOCD: Flash**，选择 ELF 文件，等待烧录完成。
+
+### 命令
+
+| 命令 | 说明 |
+|------|------|
+| `PyOCD: Select Target` | 选择目标芯片 |
+| `PyOCD: Flash` | 选择 ELF 并烧录 |
+| `PyOCD: Toggle Reset After Load` | 切换烧录后是否复位 |
+
+### 配置
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `pyocd-one-click-loader.target` | string | `""` | 目标芯片名称，如 `stm32f407vgtx` |
+| `pyocd-one-click-loader.resetAfterLoad` | boolean | `true` | 烧录后是否复位（`false` 传 `--no-reset`） |
+| `pyocd-one-click-loader.elfSearchPaths` | string[] | `[]` | 自定义 .elf 搜索目录，如 `["build", "out/Debug"]`，留空则自动检测 |
+
+> 文件夹工作区中，配置写入当前文件夹的 `.vscode/settings.json`。
+
+### 常见问题
+
+- **找不到 .elf 文件**：构建项目，或通过 `elfSearchPaths` 配置指定 .elf 所在目录。
+- **找不到 pyOCD**：在终端运行 `pyocd --version` 确认已安装。
+
+---
+
+
+
+[CHANGELOG](./CHANGELOG.md)
