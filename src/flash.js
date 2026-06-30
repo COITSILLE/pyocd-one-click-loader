@@ -3,92 +3,141 @@ const path = require('path');
 const { runInTerminal, checkPyOCD } = require('./utils');
 const { pickTarget } = require('./targets');
 
+// --- Firmware format priority (highest to lowest) ---
+// Read from configuration; default: ['.elf', '.hex'] (no .bin)
+function getFirmwareExtensions() {
+  const config = vscode.workspace.getConfiguration('pyocd-one-click-loader');
+  const exts = config.get('firmwareExtensions', ['.elf', '.hex']);
+  return exts.map(e => e.startsWith('.') ? e.toLowerCase() : `.${e.toLowerCase()}`);
+}
+
+function getFirmwareGlobPattern() {
+  const exts = getFirmwareExtensions();
+  const extNames = exts.map(e => e.replace('.', ''));
+  return `**/*.{${extNames.join(',')}}`;
+}
+
+function getFirmwarePriority(uri) {
+  const exts = getFirmwareExtensions();
+  const ext = path.extname(uri.fsPath).toLowerCase();
+  const idx = exts.indexOf(ext);
+  return idx === -1 ? exts.length : idx;
+}
+
+/**
+ * Deduplicate firmware files: when multiple formats exist for the same base name
+ * (e.g. firmware.elf, firmware.hex, firmware.bin), keep only the highest priority one.
+ */
+function deduplicateFirmwareFiles(files) {
+  const groups = new Map();
+  for (const uri of files) {
+    const ext = path.extname(uri.fsPath).toLowerCase();
+    const dir = path.dirname(uri.fsPath);
+    const base = path.basename(uri.fsPath, ext);
+    const key = path.join(dir, base);
+    const priority = getFirmwarePriority(uri);
+    const existing = groups.get(key);
+    if (!existing || priority < existing.priority) {
+      groups.set(key, { uri, priority });
+    }
+  }
+  return [...groups.values()].map(item => item.uri);
+}
+
 // Cache lives for the entire session; kept up-to-date by FileSystemWatcher.
 // Only invalidated when workspace folders change.
-let elfCache = []; // vscode.Uri[]
-let elfRefreshPromise = null;
-let elfWatcherInitialized = false;
-let elfWatcherSubscriptions = [];
+let firmwareCache = []; // vscode.Uri[]
+let firmwareRefreshPromise = null;
+let firmwareWatcherInitialized = false;
+let firmwareWatcherSubscriptions = [];
 
-function setElfCache(files) {
+function setFirmwareCache(files) {
   const unique = new Map();
   for (const file of files) {
     unique.set(file.fsPath, file);
   }
-  elfCache = [...unique.values()];
+  firmwareCache = [...unique.values()];
 }
 
-function updateElfCacheFromWatcher(uri) {
-  const existing = new Map(elfCache.map(item => [item.fsPath, item]));
+function updateFirmwareCacheFromWatcher(uri) {
+  const existing = new Map(firmwareCache.map(item => [item.fsPath, item]));
   existing.set(uri.fsPath, uri);
-  elfCache = [...existing.values()];
+  firmwareCache = [...existing.values()];
 }
 
-function removeElfFromCache(uri) {
-  elfCache = elfCache.filter(item => item.fsPath !== uri.fsPath);
+function removeFirmwareFromCache(uri) {
+  firmwareCache = firmwareCache.filter(item => item.fsPath !== uri.fsPath);
 }
 
-function ensureElfWatcher() {
-  if (elfWatcherInitialized) return;
-  elfWatcherInitialized = true;
+function ensureFirmwareWatcher() {
+  if (firmwareWatcherInitialized) return;
+  firmwareWatcherInitialized = true;
 
-  const watcher = vscode.workspace.createFileSystemWatcher('**/*.elf');
-  watcher.onDidCreate(updateElfCacheFromWatcher);
-  watcher.onDidChange(updateElfCacheFromWatcher);
-  watcher.onDidDelete(removeElfFromCache);
-  elfWatcherSubscriptions.push(watcher);
+  const watcher = vscode.workspace.createFileSystemWatcher(getFirmwareGlobPattern());
+  watcher.onDidCreate(updateFirmwareCacheFromWatcher);
+  watcher.onDidChange(updateFirmwareCacheFromWatcher);
+  watcher.onDidDelete(removeFirmwareFromCache);
+  firmwareWatcherSubscriptions.push(watcher);
 
   const closeWatcher = vscode.workspace.onDidChangeWorkspaceFolders(() => {
     // Workspace changed: clear stale cache, will re-scan on next request.
-    elfCache = [];
+    firmwareCache = [];
   });
-  elfWatcherSubscriptions.push(closeWatcher);
+  firmwareWatcherSubscriptions.push(closeWatcher);
 }
 
 function disposeFlashResources() {
-  for (const disposable of elfWatcherSubscriptions) {
+  for (const disposable of firmwareWatcherSubscriptions) {
     disposable.dispose();
   }
-  elfWatcherSubscriptions = [];
-  elfWatcherInitialized = false;
-  elfRefreshPromise = null;
+  firmwareWatcherSubscriptions = [];
+  firmwareWatcherInitialized = false;
+  firmwareRefreshPromise = null;
+}
+
+// Build a glob extension set like "{elf,hex}" from configured firmwareExtensions.
+function buildExtGlob() {
+  return `{${getFirmwareExtensions().map(e => e.replace('.', '')).join(',')}}`;
 }
 
 // Get user-configured search patterns (e.g. ["build", "out/Debug"]).
-// Each entry is turned into "{entry}/** /*.elf" (no space).
+// Each entry is turned into "{entry}/**/*.{elf,hex}".
 // Returns empty array if not configured.
 function getUserSearchPatterns() {
   const config = vscode.workspace.getConfiguration('pyocd-one-click-loader');
   const paths = config.get('elfSearchPaths', []);
   if (!Array.isArray(paths) || paths.length === 0) return [];
-  return paths.map(p => `${p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/**/*.elf`);
+  const extGlob = buildExtGlob();
+  return paths.map(p => `${p.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/**/*.${extGlob}`);
 }
 
 /**
- * Find .elf files inside the workspace.
+ * Find firmware files (.elf, .hex, .bin) inside the workspace.
+ * When multiple formats exist for the same base name, only the highest-priority
+ * format (elf > hex > bin) is kept.
  * Cache is session-long, kept current by FileSystemWatcher.
  * Only re-scans when cache is empty (first run or workspace changed).
  */
-async function findElfFiles() {
+async function findFirmwareFiles() {
   const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
   if (workspaceFolders.length === 0) {
-    setElfCache([]);
+    setFirmwareCache([]);
     return [];
   }
 
-  ensureElfWatcher();
+  ensureFirmwareWatcher();
 
   // Watcher keeps cache up-to-date; return immediately if populated.
-  if (elfCache.length > 0) {
-    return elfCache;
+  if (firmwareCache.length > 0) {
+    return firmwareCache;
   }
 
   // Deduplicate concurrent scans.
-  if (elfRefreshPromise) {
-    return elfRefreshPromise;
+  if (firmwareRefreshPromise) {
+    return firmwareRefreshPromise;
   }
 
-  elfRefreshPromise = (async () => {
+  firmwareRefreshPromise = (async () => {
     const uniqueFiles = new Map();
     const addFiles = files => {
       for (const file of files) {
@@ -111,7 +160,14 @@ async function findElfFiles() {
 
     // 2) Common build directories
     if (uniqueFiles.size === 0) {
-      const commonBuildDirs = ['build/**/*.elf', 'out/**/*.elf', 'Debug/**/*.elf', 'Release/**/*.elf', 'bin/**/*.elf'];
+      const extGlob = buildExtGlob();
+      const commonBuildDirs = [
+        `build/**/*.${extGlob}`,
+        `out/**/*.${extGlob}`,
+        `Debug/**/*.${extGlob}`,
+        `Release/**/*.${extGlob}`,
+        `bin/**/*.${extGlob}`
+      ];
       const buildTasks = [];
       for (const pattern of commonBuildDirs) {
         for (const folder of workspaceFolders) {
@@ -125,31 +181,35 @@ async function findElfFiles() {
     // 3) Full workspace scan (last resort)
     if (uniqueFiles.size === 0) {
       const fallbackTasks = workspaceFolders.map(folder => (
-        vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/*.elf'), null, 200)
+        vscode.workspace.findFiles(new vscode.RelativePattern(folder, getFirmwareGlobPattern()), null, 200)
       ));
       const fallbackResults = await Promise.all(fallbackTasks);
       fallbackResults.forEach(addFiles);
     }
 
-    setElfCache([...uniqueFiles.values()]);
-    return elfCache;
+    // Deduplicate: keep highest-priority format per base name
+    const deduplicated = deduplicateFirmwareFiles([...uniqueFiles.values()]);
+    setFirmwareCache(deduplicated);
+    return firmwareCache;
   })();
 
   try {
-    return await elfRefreshPromise;
+    return await firmwareRefreshPromise;
   } finally {
-    elfRefreshPromise = null;
+    firmwareRefreshPromise = null;
   }
 }
 
 /**
- * Let user pick an ELF file from the discovered list.
+ * Let user pick a firmware file from the discovered list.
+ * Deduplicated by base name (elf > hex > bin priority).
  * Returns the selected URI or undefined.
  */
-async function pickElfFile() {
-  const files = await findElfFiles();
+async function pickFirmwareFile() {
+  const files = await findFirmwareFiles();
   if (files.length === 0) {
-    vscode.window.showErrorMessage('No .elf files found in the workspace. Try building first.');
+    const exts = getFirmwareExtensions().join('/');
+    vscode.window.showErrorMessage(`No firmware files (${exts}) found in the workspace. Try building first.`);
     return undefined;
   }
 
@@ -159,7 +219,7 @@ async function pickElfFile() {
     const relative = path.relative(base, uri.fsPath);
     return {
       label: relative,
-      description: '', // could add date but QuickPick doesn't show easily
+      description: '',
       uri
     };
   });
@@ -181,7 +241,7 @@ async function flash() {
     return;
   }
 
-  const fileUri = await pickElfFile();
+  const fileUri = await pickFirmwareFile();
   if (!fileUri) return;
 
   const config = vscode.workspace.getConfiguration('pyocd-one-click-loader', fileUri);
@@ -206,4 +266,4 @@ async function flash() {
   runInTerminal(command);
 }
 
-module.exports = { flash, pickElfFile, disposeFlashResources };
+module.exports = { flash, pickFirmwareFile, disposeFlashResources };

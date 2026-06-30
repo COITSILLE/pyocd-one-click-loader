@@ -2,8 +2,16 @@
 
 All notable changes to the "pyocd-one-click-loader" extension are documented here.
 
+## [1.3.1]
+- **Configurable firmware extensions**: Added `firmwareExtensions` setting to customize which file extensions to search for (default: `[".elf", ".hex"]`). Extensions are ordered by priority — first match wins when same base name.
+- Updated all search paths, file watcher, and error messages to respect the configured extensions.
+
+## [1.3.0]
+- **Multi-format firmware search**: Now searches for `.elf`, `.hex`, and `.bin` files with priority (elf > hex > bin). When multiple formats exist for the same base name, only the highest-priority one is shown.
+- Updated `elfSearchPaths` to search all three formats in the configured directories.
+
 ## [1.2.1]
-- fix README encoding
+- fix README encoding, detail troubleshooting
 
 ## [1.2.0]
 - **Performance**: `pyocd --version` check result is cached after first call, eliminating per-click process spawning overhead.

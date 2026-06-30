@@ -2,7 +2,7 @@
   "name": "pyocd-one-click-loader",
   "displayName": "PyOCD One-Click Programmer",
   "description": "One-click flashing with pyOCD - auto-detects targets and ELF files",
-  "version": "1.2.1",
+  "version": "1.3.1",
   "engines": {
     "vscode": "^1.118.0"
   },
@@ -54,6 +54,15 @@
           "scope": "resource",
           "description": "Whether to reset the target after pyocd load (set to false to pass --no-reset)."
         },
+        "pyocd-one-click-loader.firmwareExtensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [".elf", ".hex"],
+          "scope": "resource",
+          "description": "Firmware file extensions to search for, in priority order (first match wins when same base name). Example: [\".elf\", \".hex\", \".bin\"]. Default: [\".elf\", \".hex\"]."
+        },
         "pyocd-one-click-loader.elfSearchPaths": {
           "type": "array",
           "items": {
@@ -61,7 +70,7 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Directories to search for .elf files (relative to workspace root). Speeds up flash by avoiding full workspace scan. Example: [\"build\", \"out/Debug\"]. Leave empty to auto-detect."
+          "description": "Directories to search for firmware files (relative to workspace root). Speeds up flash by avoiding full workspace scan. Example: [\"build\", \"out/Debug\"]. Leave empty to auto-detect. File extensions are controlled by firmwareExtensions."
         }
       }
     }
